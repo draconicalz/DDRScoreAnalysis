@@ -7,27 +7,30 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PROJECT_ROOT / "data" / "processed" / "ddr_analysis.db"
 RAW_PATH = PROJECT_ROOT / "data" / "raw" / "output_10_19_2026.json"
 
-# Test Raw Data
-with open(RAW_PATH, encoding = "utf-8") as file:
-    data = json.load(file)
+def loadJsonToDatabase(rawPath, dbPath):
+    try:
+        with open(rawPath, encoding = "utf-8") as file:
+            data = json.load(file)
 
-print(type(data))
+    except FileNotFoundError:
+        print(f"File not found: {rawPath}")
+        raise
 
-if isinstance(data, dict):
-    print(data.keys())
-elif isinstance(data, list):
-    print(len(data))
-    if data:
-        print(data[0])
+    except json.JSONDecodeError:
+        print(f"Invalid JSON in file: {rawPath}")
+        raise
 
-# Connect database
+    except OSError as e:
+        print(f"Error reading file: {e}")
+        raise
+    
+    connection = sqlite3.connect(dbPath)
 
-def loadJsonToDatabase(data, path):
-    connection = sqlite3.connect(path)
-
-    cursor = connection.cursor()
     try:
         for item in data:
+            connection.execute("PRAGMA foreign_keys = ON")
+            cursor = connection.cursor()
+
             # Populate to Songs
             cursor.execute(
                 """
@@ -55,12 +58,15 @@ def loadJsonToDatabase(data, path):
             """,
                 (item["song_id"], item["difficulty"])
             )
-            chart_id = cursor.fetchone()[0]
 
+            chart_id = cursor.fetchone()[0]
+            time_played = item.get("time_played") or None
             cursor.execute(
                 """
-                INSERT INTO Scores()
-                """
+                INSERT OR IGNORE INTO Scores(chart_id, score, grade, lamp, flare, flare_skill, time_uploaded, time_played)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (chart_id, item["score"], item["grade"], item["lamp"], item.get("flare"), item.get("flare_skill"), item["time_uploaded"], time_played)
             )
 
         connection.commit()
@@ -71,3 +77,5 @@ def loadJsonToDatabase(data, path):
 
     finally:
          connection.close()
+
+loadJsonToDatabase(RAW_PATH, DB_PATH)
