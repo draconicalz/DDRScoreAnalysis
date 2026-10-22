@@ -7,7 +7,54 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PROJECT_ROOT / "data" / "processed" / "ddr_analysis.db"
 RAW_PATH = PROJECT_ROOT / "data" / "raw" / "output_10_19_2026.json"
 
-def loadJsonToDatabase(rawPath, dbPath):
+def initializeDatabase(dbPath=DB_PATH):
+    connection = sqlite3.connect(dbPath)
+    try:
+        connection.execute("PRAGMA foreign_keys = ON")
+
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS Songs(
+            song_id TEXT Primary KEY,
+            song_name TEXT NOT NULL
+            )
+        """)
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS Charts (
+                chart_id INTEGER PRIMARY KEY,
+                song_id TEXT NOT NULL,
+                difficulty TEXT NOT NULL,
+                rating INTEGER NOT NULL,
+                UNIQUE(song_id, difficulty),
+                FOREIGN KEY (song_id) REFERENCES Songs(song_id)
+            )
+        """)
+
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS Scores (
+                score_id INTEGER PRIMARY KEY,
+                chart_id INTEGER NOT NULL,
+                score INTEGER NOT NULL,
+                grade TEXT NOT NULL,
+                lamp TEXT NOT NULL,
+                flare TEXT,
+                flare_skill INTEGER,
+                time_uploaded TEXT NOT NULL,
+                time_played TEXT,
+                UNIQUE(chart_id, time_uploaded),
+                FOREIGN KEY (chart_id) REFERENCES Charts(chart_id)
+            )
+        """)
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+def loadJsonToDatabase(rawPath=RAW_PATH, dbPath=DB_PATH):
     try:
         with open(rawPath, encoding = "utf-8") as file:
             data = json.load(file)
@@ -25,10 +72,10 @@ def loadJsonToDatabase(rawPath, dbPath):
         raise
     
     connection = sqlite3.connect(dbPath)
-
+    connection.execute("PRAGMA foreign_keys = ON")
+    
     try:
         for item in data:
-            connection.execute("PRAGMA foreign_keys = ON")
             cursor = connection.cursor()
 
             # Populate to Songs
@@ -76,6 +123,4 @@ def loadJsonToDatabase(rawPath, dbPath):
         raise
 
     finally:
-         connection.close()
-
-loadJsonToDatabase(RAW_PATH, DB_PATH)
+        connection.close()
