@@ -94,6 +94,35 @@ def getLastUpload():
     connection.close()
     return res
 
-res = getLastUpload()
+def getDifficultyAnalysis():
+    """Gets charts played count, average, min, and max score for each difficulty of charts played for that difficulty."""
+
+    connection = sqlite3.connect(DB_PATH)
+    query = """
+    SELECT
+        level,
+        COUNT(*) AS chart_count,
+        CAST(AVG(personal_best) AS INTEGER) AS average_score,
+        MAX(personal_best) AS highest_score,
+        MIN(personal_best) AS lowest_score
+    FROM (
+        SELECT
+            Charts.chart_id,
+            Charts.rating AS level,
+            MAX(Scores.score) AS personal_best
+        FROM Scores
+        JOIN Charts
+            ON Scores.chart_id = Charts.chart_id
+        GROUP BY Charts.chart_id
+    )
+    GROUP BY level
+    ORDER BY level;
+    """
+    
+    res = connection.execute(query).fetchall()
+    connection.close()
+    return res
+
+res = getDifficultyAnalysis()
 for row in res:
     print(row)  
