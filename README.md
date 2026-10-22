@@ -40,12 +40,13 @@ Primary and foreign keys maintain relationships between songs, charts, and score
 
 ```text
 DDR Analysis Project/
-├── data/          # SQLite database
-├── raw_data/      # Original source data
+├── data/processed  # SQLite database
+├── data/raw        # Original source data
 ├── src/            # Data processing and analysis scripts
 ├── notebooks/      # Exploratory analysis
 ├── .gitignore
-└── README.md
+├── README.md
+└── requirements.txt
 ```
 
 ## Setup and Usage
