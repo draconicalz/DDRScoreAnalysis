@@ -8,6 +8,12 @@ DB_PATH = PROJECT_ROOT / "data" / "processed" / "ddr_analysis.db"
 RAW_PATH = PROJECT_ROOT / "data" / "raw" / "output_10_19_2026.json"
 
 def initializeDatabase(dbPath=DB_PATH):
+    """Create the Songs, Charts, and Scores tables if they don't exist.
+
+    Args:
+        dbPath (Path): Path to the SQLite database file.
+    """
+
     connection = sqlite3.connect(dbPath)
     try:
         connection.execute("PRAGMA foreign_keys = ON")
@@ -55,6 +61,20 @@ def initializeDatabase(dbPath=DB_PATH):
         connection.close()
 
 def loadJsonToDatabase(rawPath=RAW_PATH, dbPath=DB_PATH):
+    """Load DDR score data from a JSON file into the SQLite database.
+
+    Existing records that violate database constraints are ignored.
+
+    Args:
+        rawPath (Path): Path to the input JSON file.
+        dbPath (Path): Path to the SQLite database file.
+
+    Raises:
+        FileNotFoundError: If the input JSON file does not exist.
+        json.JSONDecodeError: If the input file contains invalid JSON.
+        OSError: If the input file cannot be read.
+    """
+    
     try:
         with open(rawPath, encoding = "utf-8") as file:
             data = json.load(file)
