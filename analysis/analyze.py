@@ -94,8 +94,17 @@ def getLastUpload():
     connection.close()
     return res
 
-def getDifficultyAnalysis():
-    """Gets charts played count, average, min, and max score for each difficulty of charts played for that difficulty."""
+def getRatingAnalysis(minRating = 1, maxRating = 19):
+    """Gets charts played count, average, min, and max score for each rating of charts played for that rating.
+
+    Args:
+        minRating (int): minimum rating bound
+        maxRating (int): maximum rating bound
+    """
+    if minRating < 1 or maxRating > 19:
+        raise ValueError("Rating ranges must be between 1 and 19")
+    if minRating > maxRating:
+        raise ValueError("Minimum rating must be less than or equal to Maximum rating")
 
     connection = sqlite3.connect(DB_PATH)
     query = """
@@ -103,8 +112,8 @@ def getDifficultyAnalysis():
         level,
         COUNT(*) AS chart_count,
         CAST(AVG(personal_best) AS INTEGER) AS average_score,
-        MAX(personal_best) AS highest_score,
-        MIN(personal_best) AS lowest_score
+        MAX(personal_best) AS ceiling,
+        MIN(personal_best) AS floor
     FROM (
         SELECT
             Charts.chart_id,
@@ -115,14 +124,11 @@ def getDifficultyAnalysis():
             ON Scores.chart_id = Charts.chart_id
         GROUP BY Charts.chart_id
     )
+    WHERE level BETWEEN ? AND ?
     GROUP BY level
     ORDER BY level;
     """
     
-    res = connection.execute(query).fetchall()
+    res = connection.execute(query, (minRating, maxRating)).fetchall()
     connection.close()
     return res
-
-res = getDifficultyAnalysis()
-for row in res:
-    print(row)  
