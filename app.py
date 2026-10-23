@@ -37,17 +37,35 @@ if df.empty:
     st.warning("No score data found in the database.")
     st.stop()
 
-col1, col2 = st.columns(2)
 
-col1.metric(
-    "Charts with recorded scores",
-    int(df["chart_count"].sum())
-)
+query = """
+SELECT
+    (SELECT COUNT(*) FROM Charts) AS charts_recorded,
+    (SELECT COUNT(*) FROM Scores) AS score_records,
+    (SELECT COUNT(DISTINCT song_id) FROM Charts) AS songs_played,
+    (SELECT CAST(AVG(personal_best) AS INTEGER)
+     FROM (
+         SELECT MAX(score) AS personal_best
+         FROM Scores
+         GROUP BY chart_id
+     )) AS average_personal_best;
+"""
 
-col2.metric(
-    "Average of level averages",
-    f"{df['average_score'].mean():,.0f}"
-)
+with sqlite3.connect(DB_PATH) as connection:
+    stats = pd.read_sql_query(query, connection)
+
+charts_recorded = int(stats.loc[0, "charts_recorded"])
+score_records = int(stats.loc[0, "score_records"])
+songs_played = int(stats.loc[0, "songs_played"])
+average_personal_best = stats.loc[0, "average_personal_best"]
+
+col1, col2, col3, col4 = st.columns(4)
+
+
+col1.metric("Charts recorded", f"{charts_recorded:,}")
+col2.metric("Score records", f"{score_records:,}")
+col3.metric("Songs played", f"{songs_played:,}")
+col4.metric("Average personal best", f"{average_personal_best:,}")
 
 st.subheader("Performance by Chart Rating")
 
